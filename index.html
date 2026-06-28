@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>現場計測ツール｜MGAP</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap');
+  :root {
+    --bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3450;
+    --accent:#4f8ef7;--accent2:#38c9a4;--warn:#f7894f;
+    --text:#e8eaf6;--text2:#8b90b0;--text3:#555a7a;--red:#f76f6f;
+    --mono:'DM Mono',monospace;--sans:'Noto Sans JP',sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;padding-bottom:120px;}
+  header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 20px;display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100;}
+  header .logo{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:2px;}
+  header .title{font-size:14px;font-weight:700;}
+  .container{max-width:700px;margin:0 auto;padding:20px 16px;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-bottom:14px;}
+  .card-title{font-family:var(--mono);font-size:11px;color:var(--accent);letter-spacing:2px;text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
+  .edit-badge{font-size:10px;background:rgba(247,137,79,0.2);color:var(--warn);border:1px solid var(--warn);border-radius:10px;padding:2px 10px;}
+  .field{display:flex;flex-direction:column;gap:5px;}
+  label{font-size:11px;color:var(--text2);font-weight:500;}
+  select,input[type="number"],input[type="text"]{background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--sans);font-size:14px;padding:9px 12px;width:100%;-webkit-appearance:none;transition:border-color 0.2s;}
+  select:focus,input:focus{outline:none;border-color:var(--accent);}
+  select option{background:var(--surface2);}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;}
+  .room-header{display:flex;gap:10px;margin-bottom:14px;align-items:flex-end;}
+  .room-header .field:first-child{flex:2;}
+  .room-header .field:last-child{flex:1;}
+  .divider{display:flex;align-items:center;gap:8px;margin:14px 0 10px;}
+  .divider span{font-family:var(--mono);font-size:10px;color:var(--text3);letter-spacing:1px;white-space:nowrap;}
+  .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border);}
+  .men-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;margin-bottom:8px;}
+  .men-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .men-area{font-family:var(--mono);font-size:12px;color:var(--accent);}
+  .opening-item{display:grid;grid-template-columns:100px 1fr 1fr auto;gap:6px;margin-top:6px;align-items:flex-end;}
+  .opening-item label{font-size:10px;}
+  .btn{border-radius:8px;cursor:pointer;font-family:var(--sans);transition:all 0.2s;border:none;}
+  .btn-primary{background:linear-gradient(135deg,var(--accent),#7b6ef4);color:#fff;font-size:13px;font-weight:700;padding:12px 20px;width:100%;margin-top:6px;}
+  .btn-update{background:linear-gradient(135deg,var(--warn),#e05a2b);color:#fff;font-size:13px;font-weight:700;padding:12px 20px;width:100%;margin-top:6px;}
+  .btn-cancel{background:none;border:1px solid var(--border);color:var(--text2);font-size:13px;padding:11px 20px;width:100%;margin-top:6px;}
+  .btn-ghost{background:none;border:1px dashed var(--border);color:var(--text2);font-size:12px;padding:7px 14px;width:100%;margin-top:6px;}
+  .btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+  .btn-rm{background:none;border:1px solid var(--border);border-radius:6px;color:var(--red);width:32px;height:32px;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .btn-rm:hover{background:rgba(247,111,111,0.1);}
+  .btn-edit{background:none;border:1px solid var(--border);border-radius:6px;color:var(--text2);font-size:11px;padding:4px 10px;cursor:pointer;font-family:var(--mono);}
+  .btn-edit:hover{border-color:var(--accent);color:var(--accent);}
+  .floor-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px;}
+  .floor-btn{background:var(--surface2);border:1px solid var(--border);border-radius:20px;color:var(--text2);font-size:12px;padding:5px 14px;cursor:pointer;font-family:var(--sans);}
+  .floor-btn.active{background:rgba(56,201,164,0.15);border-color:var(--accent2);color:var(--accent2);}
+  .result-room{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:10px;animation:fi 0.25s ease;}
+  .result-room.editing{border-color:var(--warn);}
+  @keyframes fi{from{opacity:0;transform:translateY(-6px);}to{opacity:1;transform:translateY(0);}}
+  .rr-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+  .rr-name{font-size:15px;font-weight:700;}
+  .rr-actions{display:flex;gap:6px;align-items:center;}
+  .metrics{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+  .rm{padding:10px 14px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);min-width:110px;}
+  .rm .rl{font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:3px;}
+  .rm .rv{font-size:18px;font-weight:700;font-family:var(--mono);}
+  .rm .rs{font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:2px;}
+  .rm .ru{font-size:11px;color:var(--text2);font-weight:400;}
+  .rm.cross .rv{color:var(--accent);}
+  .rm.c12 .rv{color:#a09bf7;}
+  .rm.floor .rv{color:var(--accent2);}
+  .detail{font-size:11px;color:var(--text3);font-family:var(--mono);line-height:1.9;white-space:pre;margin-top:8px;padding:10px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);overflow-x:auto;}
+  .total-card{background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:16px;margin:16px 0;display:none;}
+  .total-card.on{display:block;}
+  .total-card h3{font-family:var(--mono);font-size:11px;color:var(--text3);letter-spacing:2px;margin-bottom:12px;}
+  .tgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+  .ti{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px;text-align:center;}
+  .ti .tl{font-size:10px;color:var(--text3);font-family:var(--mono);margin-bottom:4px;}
+  .ti .tv{font-size:22px;font-weight:700;font-family:var(--mono);}
+  .ti .tu{font-size:11px;color:var(--text2);}
+  .ti.cross .tv{color:var(--accent);}
+  .ti.floor .tv{color:var(--accent2);}
+  .btn-copy{background:var(--surface2);border:1px solid var(--accent2);border-radius:10px;color:var(--accent2);font-size:13px;font-weight:700;padding:13px;cursor:pointer;width:100%;font-family:var(--sans);display:none;}
+  .btn-copy.on{display:block;}
+  .btn-copy.done{border-color:var(--accent);color:var(--accent);}
+  .reset-zone{border-top:1px solid var(--border);margin-top:48px;padding-top:20px;text-align:center;}
+  .reset-zone p{font-size:11px;color:var(--text3);font-family:var(--mono);margin-bottom:10px;}
+  .btn-reset{background:none;border:1px solid var(--border);border-radius:8px;color:var(--text3);font-size:12px;padding:9px 20px;cursor:pointer;font-family:var(--sans);}
+  .btn-reset:hover{border-color:var(--red);color:var(--red);}
+  .empty{text-align:center;padding:36px 0;color:var(--text3);font-family:var(--mono);font-size:12px;letter-spacing:1px;}
+  .note{font-size:11px;color:var(--text3);font-family:var(--mono);margin-top:6px;padding:7px 10px;background:var(--surface2);border-radius:6px;border-left:2px solid var(--border);}
+  .rh{display:flex;align-items:center;justify-content:space-between;margin:24px 0 10px;}
+  .rh h2{font-family:var(--mono);font-size:12px;color:var(--text2);letter-spacing:2px;}
+  .rh .cnt{font-family:var(--mono);font-size:12px;color:var(--accent);}
+
+  /* モーダル */
+  #modal{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.78);z-index:9999;display:none;align-items:center;justify-content:center;}
+  #modal.on{display:flex;}
+  #modal .box{background:#1a1d27;border:1px solid #4f8ef7;border-radius:14px;padding:28px 24px;max-width:320px;width:90%;text-align:center;}
+  #modal .mtitle{font-size:15px;font-weight:700;color:#e8eaf6;margin-bottom:10px;}
+  #modal .mmsg{font-size:12px;color:#8b90b0;margin-bottom:22px;line-height:1.8;}
+  #modal .mbtns{display:flex;gap:10px;}
+  #modal .mbtns button{flex:1;padding:11px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;font-family:var(--sans);border:none;}
+  #modal .mcancel{background:#22263a;color:#8b90b0;border:1px solid #2e3450 !important;}
+  #modal .mok{background:#f76f6f;color:#fff;}
+</style>
+</head>
+<body>
+
+<!-- モーダル -->
+<div id="modal">
+  <div class="box">
+    <div class="mtitle" id="mtitle">確認</div>
+    <div class="mmsg" id="mmsg"></div>
+    <div class="mbtns">
+      <button class="mcancel" id="mbtnCancel">キャンセル</button>
+      <button class="mok" id="mbtnOk">実行する</button>
+    </div>
+  </div>
+</div>
+
+<header>
+  <span class="logo">MGAP</span>
+  <span class="title">現場計測ツール</span>
+</header>
+
+<div class="container">
+
+  <div class="card" id="input-card">
+    <div class="card-title">
+      <span id="form-label">部屋を追加</span>
+      <span class="edit-badge" id="edit-badge" style="display:none;">編集中</span>
+    </div>
+
+    <div class="room-header">
+      <div class="field">
+        <label>部屋タイプ</label>
+        <select id="room-type" onchange="onTypeChange()">
+          <optgroup label="居室">
+            <option>リビング</option><option>ダイニング</option><option>キッチン</option>
+            <option>LDK</option><option>DK</option><option>洋室</option><option>和室</option>
+            <option>納戸・サービスルーム</option>
+          </optgroup>
+          <optgroup label="水回り">
+            <option>浴室</option><option>洗面所</option><option>脱衣所</option><option>トイレ</option>
+          </optgroup>
+          <optgroup label="通路・その他">
+            <option>玄関</option><option>廊下</option><option>ホール</option>
+          </optgroup>
+          <optgroup label="収納">
+            <option>クローゼット</option><option>ウォークインクローゼット</option>
+            <option>押入れ</option><option>トランクルーム</option>
+          </optgroup>
+        </select>
+      </div>
+      <div class="field" id="suffix-wrap" style="display:none;">
+        <label>補足名（奥・手前・中央 など）</label>
+        <input type="text" id="room-suffix" placeholder="例：奥">
+      </div>
+    </div>
+
+    <div class="divider"><span>クロス（面ごとに入力）</span></div>
+    <div id="men-container"></div>
+    <button class="btn btn-ghost" onclick="addMen('壁')">＋ 壁面を追加</button>
+    <button class="btn btn-ghost" onclick="addMen('天井')" style="margin-top:6px;">＋ 天井を追加</button>
+
+    <div class="divider"><span>床（壁とは別に実寸入力）</span></div>
+    <div class="floor-row" id="floor-btns">
+      <button class="floor-btn active" onclick="selFloor(this,'CF（クッションフロア）')">CF</button>
+      <button class="floor-btn" onclick="selFloor(this,'フローリング')">フローリング</button>
+      <button class="floor-btn" onclick="selFloor(this,'フロアタイル')">フロアタイル</button>
+      <button class="floor-btn" onclick="selFloor(this,'その他')">その他</button>
+    </div>
+    <div class="row2">
+      <div class="field"><label>床 幅（m）</label><input type="number" id="floor-w" step="0.01" placeholder="例：3.40" min="0"></div>
+      <div class="field"><label>床 奥行（m）</label><input type="number" id="floor-d" step="0.01" placeholder="例：4.30" min="0"></div>
+    </div>
+    <div class="note">壁の厚みを除いた内寸で入力してください</div>
+
+    <div id="btn-add"><button class="btn btn-primary" onclick="addRoom()">この部屋を追加 →</button></div>
+    <div id="btn-edit" style="display:none;">
+      <button class="btn btn-update" onclick="updateRoom()">この内容で更新する</button>
+      <button class="btn btn-cancel" onclick="cancelEdit()">キャンセル</button>
+    </div>
+  </div>
+
+  <div class="rh"><h2>計測結果</h2><div class="cnt" id="room-count">0 部屋</div></div>
+  <div id="results-list"><div class="empty">まだ部屋が追加されていません</div></div>
+
+  <div class="total-card" id="total-card">
+    <h3>合　計</h3>
+    <div class="tgrid">
+      <div class="ti cross"><div class="tl">クロス合計</div><div class="tv" id="t-cross">0<span class="tu"> ㎡</span></div></div>
+      <div class="ti floor"><div class="tl">床合計</div><div class="tv" id="t-floor">0<span class="tu"> ㎡</span></div></div>
+    </div>
+  </div>
+
+  <button class="btn-copy" id="copy-btn" onclick="copyAll()">📋 全部屋の結果をコピー</button>
+
+  <div class="reset-zone">
+    <p>⚠️ 全データを削除する場合のみ</p>
+    <button class="btn-reset" onclick="askReset()">全データをリセット</button>
+  </div>
+</div>
+
+<script>
+  let rooms = [];
+  let menCount = 0;
+  let opCount = 0;
+  let curFloor = 'CF（クッションフロア）';
+  let editingId = null;
+
+  // ---- モーダル ----
+  function showModal(title, msg, onOk) {
+    document.getElementById('mtitle').textContent = title;
+    document.getElementById('mmsg').textContent = msg;
+    const modal = document.getElementById('modal');
+    modal.classList.add('on');
+    const okBtn = document.getElementById('mbtnOk');
+    const cancelBtn = document.getElementById('mbtnCancel');
+    okBtn.onclick = function() { modal.classList.remove('on'); if (onOk) onOk(); };
+    cancelBtn.onclick = function() { modal.classList.remove('on'); };
+  }
+
+  // ---- フォーム制御 ----
+  function onTypeChange() {
+    const t = document.getElementById('room-type').value;
+    document.getElementById('suffix-wrap').style.display = (t==='洋室'||t==='和室') ? 'block' : 'none';
+    if (t!=='洋室'&&t!=='和室') document.getElementById('room-suffix').value = '';
+  }
+
+  function selFloor(btn, type) {
+    document.querySelectorAll('.floor-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    curFloor = type;
+  }
+
+  // ---- 面 ----
+  function addMen(label) {
+    menCount++;
+    const id = 'men-' + menCount;
+    const div = document.createElement('div');
+    div.className = 'men-card'; div.id = id;
+    div.innerHTML = buildMen(id, label, '', '');
+    document.getElementById('men-container').appendChild(div);
+  }
+
+  function buildMen(id, label, w, h) {
+    return `
+      <div class="men-head">
+        <input type="text" value="${label}" style="background:none;border:none;font-family:var(--mono);font-size:12px;color:var(--text2);font-weight:700;padding:0;width:180px;" placeholder="壁①・天井・出隅など">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="men-area" id="area-${id}">—</span>
+          <button class="btn-rm" onclick="removeMen('${id}')">×</button>
+        </div>
+      </div>
+      <div class="row2" style="margin-bottom:8px;">
+        <div class="field"><label>幅（m）</label><input type="number" step="0.01" placeholder="例：3.60" min="0" value="${w}" oninput="calcMen('${id}')"></div>
+        <div class="field"><label>高さ（m）</label><input type="number" step="0.01" placeholder="例：2.40" min="0" value="${h}" oninput="calcMen('${id}')"></div>
+      </div>
+      <div id="ops-${id}"></div>
+      <button class="btn btn-ghost" style="margin-top:4px;font-size:11px;padding:5px 10px;" onclick="addOp('${id}')">＋ 開口部を追加（引き算）</button>
+    `;
+  }
+
+  function removeMen(id) { const el=document.getElementById(id); if(el) el.remove(); }
+
+  function calcMen(menId) {
+    const card = document.getElementById(menId); if(!card) return;
+    const nums = card.querySelectorAll('input[type="number"]');
+    let area = (parseFloat(nums[0].value)||0) * (parseFloat(nums[1].value)||0);
+    card.querySelectorAll('.op-w').forEach((ow,i)=>{
+      area -= (parseFloat(ow.value)||0) * (parseFloat(card.querySelectorAll('.op-h')[i].value)||0);
+    });
+    const el = document.getElementById('area-'+menId);
+    if(el) el.textContent = r2(Math.max(0,area)) + ' ㎡';
+  }
+
+  function addOp(menId, type='窓', w='', h='') {
+    opCount++;
+    const opId = 'op-' + opCount;
+    const div = document.createElement('div');
+    div.className = 'opening-item'; div.id = opId;
+    const types = ['窓','ドア','引き戸','掃き出し窓','出隅','入隅','その他'];
+    const opts = types.map(t=>`<option${t===type?' selected':''}>${t}</option>`).join('');
+    div.innerHTML = `
+      <div class="field"><label>種類</label><select style="font-size:12px;padding:7px 8px;">${opts}</select></div>
+      <div class="field"><label>幅（m）</label><input type="number" step="0.01" placeholder="幅" min="0" value="${w}" class="op-w" oninput="calcMen('${menId}')"></div>
+      <div class="field"><label>高さ（m）</label><input type="number" step="0.01" placeholder="高さ" min="0" value="${h}" class="op-h" oninput="calcMen('${menId}')"></div>
+      <button class="btn-rm" style="margin-top:18px;" onclick="removeOp('${opId}','${menId}')">×</button>
+    `;
+    document.getElementById('ops-'+menId).appendChild(div);
+    if(w&&h) calcMen(menId);
+  }
+
+  function removeOp(opId, menId) { const el=document.getElementById(opId); if(el)el.remove(); calcMen(menId); }
+
+  // ---- データ収集 ----
+  function collect() {
+    const roomType = document.getElementById('room-type').value;
+    const suffix = document.getElementById('room-suffix').value.trim();
+    const floorW = parseFloat(document.getElementById('floor-w').value)||0;
+    const floorD = parseFloat(document.getElementById('floor-d').value)||0;
+    const cards = document.querySelectorAll('#men-container .men-card');
+    if(cards.length===0 && floorW===0) { showModal('入力エラー','面または床の寸法を入力してください',null); return null; }
+
+    let menData=[]; let totalNet=0;
+    cards.forEach(card=>{
+      const name = card.querySelector('input[type="text"]').value||'面';
+      const nums = card.querySelectorAll('input[type="number"]');
+      const w=parseFloat(nums[0].value)||0, h=parseFloat(nums[1].value)||0;
+      const base=r2(w*h);
+      const opWs=card.querySelectorAll('.op-w'), opHs=card.querySelectorAll('.op-h'), opSels=card.querySelectorAll('.opening-item select');
+      let ops=[], openArea=0;
+      opWs.forEach((ow,i)=>{
+        const ow_v=parseFloat(ow.value)||0, oh_v=parseFloat(opHs[i].value)||0;
+        if(ow_v>0&&oh_v>0){ ops.push({type:opSels[i]?opSels[i].value:'',w:ow_v,h:oh_v,area:r2(ow_v*oh_v)}); openArea+=ow_v*oh_v; }
+      });
+      const net=Math.max(0,base-openArea); totalNet+=net;
+      menData.push({name,w,h,base,ops,openArea:r2(openArea),net:r2(net)});
+    });
+
+    const crossReal=r2(totalNet), crossCeil=Math.ceil(totalNet);
+    const c12Real=r2(totalNet*1.2), c12Ceil=Math.ceil(totalNet*1.2);
+    const floorReal=r2(floorW*floorD), floorCeil=Math.ceil(floorReal);
+    const name = suffix ? `${roomType}（${suffix}）` : roomType;
+    return {name, men:menData, crossReal, crossCeil, c12Real, c12Ceil, floorType:curFloor, floorW, floorD, floorReal, floorCeil};
+  }
+
+  function r2(v){ return Math.round(v*100)/100; }
+
+  // ---- 追加・更新・削除 ----
+  function addRoom() { const d=collect(); if(!d) return; rooms.push({id:Date.now(),...d}); render(); resetForm(); }
+
+  function editRoom(id) {
+    const room=rooms.find(r=>r.id===id); if(!room) return;
+    editingId=id;
+    const sel=document.getElementById('room-type');
+    const match=room.name.match(/^(.+?)(?:（(.+)）)?$/);
+    const base=match?match[1]:room.name, sfx=match&&match[2]?match[2]:'';
+    for(let o of sel.options){ if(o.value===base){sel.value=base;break;} }
+    document.getElementById('suffix-wrap').style.display=(base==='洋室'||base==='和室')?'block':'none';
+    document.getElementById('room-suffix').value=sfx;
+    document.getElementById('floor-w').value=room.floorW||'';
+    document.getElementById('floor-d').value=room.floorD||'';
+    document.querySelectorAll('.floor-btn').forEach(b=>{ b.classList.remove('active'); if(b.getAttribute('onclick').includes(room.floorType)) b.classList.add('active'); });
+    curFloor=room.floorType;
+    document.getElementById('men-container').innerHTML=''; menCount=0;
+    room.men.forEach(m=>{
+      menCount++; const mid='men-'+menCount;
+      const div=document.createElement('div'); div.className='men-card'; div.id=mid;
+      div.innerHTML=buildMen(mid,m.name,m.w,m.h);
+      document.getElementById('men-container').appendChild(div);
+      m.ops.forEach(o=>addOp(mid,o.type,o.w,o.h));
+      calcMen(mid);
+    });
+    document.getElementById('btn-add').style.display='none';
+    document.getElementById('btn-edit').style.display='block';
+    document.getElementById('edit-badge').style.display='inline-block';
+    document.getElementById('form-label').textContent='部屋を編集';
+    document.querySelectorAll('.result-room').forEach(el=>el.classList.remove('editing'));
+    const card=document.getElementById('rc-'+id); if(card){card.classList.add('editing');card.scrollIntoView({behavior:'smooth',block:'nearest'});}
+    document.getElementById('input-card').scrollIntoView({behavior:'smooth'});
+  }
+
+  function updateRoom() {
+    const d=collect(); if(!d) return;
+    const idx=rooms.findIndex(r=>r.id===editingId);
+    if(idx!==-1) rooms[idx]={id:editingId,...d};
+    editingId=null; render(); resetForm();
+  }
+
+  function cancelEdit() { editingId=null; resetForm(); document.querySelectorAll('.result-room').forEach(el=>el.classList.remove('editing')); }
+
+  function deleteRoom(id) {
+    showModal('削除の確認','この部屋のデータを削除しますか？',()=>{
+      rooms=rooms.filter(r=>r.id!==id);
+      if(editingId===id){editingId=null;resetForm();}
+      render();
+    });
+  }
+
+  function askReset() {
+    if(rooms.length===0){ showModal('データなし','削除するデータがありません',null); return; }
+    showModal('全データをリセット','全部屋のデータを削除します。\nこの操作は元に戻せません。',()=>{
+      rooms=[]; editingId=null; render(); resetForm();
+    });
+  }
+
+  // ---- 描画 ----
+  function render() {
+    const list=document.getElementById('results-list');
+    document.getElementById('room-count').textContent=rooms.length+' 部屋';
+    const total=document.getElementById('total-card');
+    const copyBtn=document.getElementById('copy-btn');
+    if(rooms.length===0){
+      list.innerHTML='<div class="empty">まだ部屋が追加されていません</div>';
+      total.classList.remove('on'); copyBtn.classList.remove('on'); return;
+    }
+    list.innerHTML=rooms.map(r=>{
+      let det='';
+      if(r.men.length>0){
+        r.men.forEach(m=>{
+          det+=`${m.name}：${m.w}m × ${m.h}m = ${m.base}㎡`;
+          if(m.ops.length>0){ m.ops.forEach(o=>{det+=`\n  ▼ ${o.type} ${o.w}×${o.h}m → −${o.area}㎡`;}); det+=`\n  → 正味：${m.net}㎡\n`; }
+          else det+='\n';
+        });
+        det+=`\nクロス合計：${r.crossCeil}㎡（${r.crossReal}）`;
+        det+=`\nクロス1.2込：${r.c12Ceil}㎡（${r.c12Real}）`;
+      }
+      if(r.floorReal>0) det+=`\n\n床（${r.floorType}）：${r.floorW}m × ${r.floorD}m = ${r.floorReal}㎡ → ${r.floorCeil}㎡（${r.floorReal}）`;
+      return `
+      <div class="result-room" id="rc-${r.id}">
+        <div class="rr-head">
+          <div class="rr-name">${r.name}</div>
+          <div class="rr-actions">
+            <button class="btn-edit" onclick="editRoom(${r.id})">編集</button>
+            <button class="btn-rm" onclick="deleteRoom(${r.id})">×</button>
+          </div>
+        </div>
+        <div class="metrics">
+          ${r.men.length>0?`
+          <div class="rm cross"><div class="rl">クロス合計</div><div class="rv">${r.crossCeil}<span class="ru"> ㎡</span></div><div class="rs">（${r.crossReal}）</div></div>
+          <div class="rm c12"><div class="rl">クロス1.2込</div><div class="rv">${r.c12Ceil}<span class="ru"> ㎡</span></div><div class="rs">（${r.c12Real}）</div></div>`:''}
+          ${r.floorReal>0?`<div class="rm floor"><div class="rl">床（${r.floorType}）</div><div class="rv">${r.floorCeil}<span class="ru"> ㎡</span></div><div class="rs">（${r.floorReal}）</div></div>`:''}
+        </div>
+        <div class="detail">${det}</div>
+      </div>`;
+    }).join('');
+    const tc=rooms.reduce((s,r)=>s+r.crossCeil,0);
+    const tf=rooms.reduce((s,r)=>s+r.floorCeil,0);
+    document.getElementById('t-cross').innerHTML=tc+'<span class="tu"> ㎡</span>';
+    document.getElementById('t-floor').innerHTML=tf+'<span class="tu"> ㎡</span>';
+    total.classList.add('on'); copyBtn.classList.add('on');
+    copyBtn.textContent='📋 全部屋の結果をコピー'; copyBtn.classList.remove('done');
+  }
+
+  // ---- コピー ----
+  function copyAll() {
+    const now=new Date(), d=`${now.getFullYear()}/${now.getMonth()+1}/${now.getDate()}`;
+    const tc=rooms.reduce((s,r)=>s+r.crossCeil,0), tf=rooms.reduce((s,r)=>s+r.floorCeil,0);
+    let txt=`【現場計測データ】${d}\n${'─'.repeat(32)}\n`;
+    rooms.forEach(r=>{
+      txt+=`\n■ ${r.name}\n`;
+      if(r.men.length>0){
+        r.men.forEach(m=>{
+          txt+=`  ${m.name}：${m.w}m × ${m.h}m = ${m.base}㎡\n`;
+          if(m.ops.length>0){ m.ops.forEach(o=>{txt+=`    ▼ ${o.type} ${o.w}×${o.h}m → −${o.area}㎡\n`;}); txt+=`    → 正味：${m.net}㎡\n`; }
+        });
+        txt+=`  クロス合計：${r.crossCeil}㎡（${r.crossReal}）\n`;
+        txt+=`  クロス1.2込：${r.c12Ceil}㎡（${r.c12Real}）\n`;
+      }
+      if(r.floorReal>0) txt+=`  床（${r.floorType}）：${r.floorW}m × ${r.floorD}m = ${r.floorReal}㎡ → ${r.floorCeil}㎡（${r.floorReal}）\n`;
+    });
+    txt+=`\n${'─'.repeat(32)}\n【合計】\n  クロス合計：${tc}㎡\n  床合計：${tf}㎡\n`;
+    navigator.clipboard.writeText(txt).then(()=>{
+      const btn=document.getElementById('copy-btn');
+      btn.textContent='✅ コピーしました！'; btn.classList.add('done');
+      setTimeout(()=>{ btn.textContent='📋 全部屋の結果をコピー'; btn.classList.remove('done'); },2500);
+    });
+  }
+
+  // ---- リセット ----
+  function resetForm() {
+    document.getElementById('room-type').value='リビング';
+    document.getElementById('room-suffix').value='';
+    document.getElementById('suffix-wrap').style.display='none';
+    document.getElementById('floor-w').value='';
+    document.getElementById('floor-d').value='';
+    document.getElementById('men-container').innerHTML='';
+    document.querySelectorAll('.floor-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelector('.floor-btn').classList.add('active');
+    curFloor='CF（クッションフロア）'; menCount=0; opCount=0;
+    document.getElementById('btn-add').style.display='block';
+    document.getElementById('btn-edit').style.display='none';
+    document.getElementById('edit-badge').style.display='none';
+    document.getElementById('form-label').textContent='部屋を追加';
+  }
+</script>
+</body>
+</html>
